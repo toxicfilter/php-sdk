@@ -1,3 +1,5 @@
+![ToxicFilter PHP](https://raw.githubusercontent.com/toxicfilter/php-sdk/main/art/banner.png)
+
 # ToxicFilter for PHP
 
 The official PHP client for [ToxicFilter](https://toxicfilter.com).
@@ -30,7 +32,7 @@ publish();
 
 Three decisions, not two. `review` is where the uncertainty is allowed to live: forced to
 choose between publishing and deleting, a threshold set safely deletes real posts and one
-set kindly publishes the abuse. There is no `isToxic()` here for the same reason — fifteen
+set kindly publishes the abuse. There is no `isToxic()` here for the same reason: fifteen
 categories collapsed into one boolean is somebody else's policy in your code.
 
 ## What it does for you
@@ -232,3 +234,12 @@ The split is deliberate. A stub agrees with whatever it is handed, so it can pro
 client behaves correctly and can never prove it agrees with the API about a field name.
 Fixtures alone would match the API on the day they were written and drift silently
 afterwards.
+
+## Author
+
+Created by [Edu Lazaro](https://edulazaro.com) for [ToxicFilter](https://toxicfilter.com),
+the moderation API this client speaks to.
+
+## License
+
+The ToxicFilter PHP client is open-sourced software licensed under the [MIT license](LICENSE).
