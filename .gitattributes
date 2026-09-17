@@ -1,0 +1,6 @@
+# Lo que no viaja en el paquete instalado. Quien lo instala quiere src/, no la suite.
+/tests           export-ignore
+/phpunit.xml     export-ignore
+/.gitattributes  export-ignore
+/.gitignore      export-ignore
+/.github         export-ignore

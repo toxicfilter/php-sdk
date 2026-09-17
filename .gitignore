@@ -1,0 +1,8 @@
+/vendor
+/.phpunit.result.cache
+/.phpunit.cache
+
+# Una librería no comitea su lock: lo resuelve la aplicación que la instala, y aquí solo
+# serviría para convertir cada actualización de PHPUnit en un commit de ruido. El CI hace
+# `composer update` a propósito, por lo mismo.
+/composer.lock

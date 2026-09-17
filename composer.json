@@ -1,0 +1,37 @@
+{
+    "name": "edulazaro/toxicfilter-sdk",
+    "description": "The official PHP client for the ToxicFilter content moderation API.",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://toxicfilter.com/docs/sdks",
+    "support": {
+        "issues": "https://github.com/toxicfilter/php-sdk/issues",
+        "source": "https://github.com/toxicfilter/php-sdk",
+        "docs": "https://toxicfilter.com/docs/sdks"
+    },
+    "require": {
+        "php": "^8.1",
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5|^11.0|^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ToxicFilter\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ToxicFilter\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "scripts": {
+        "test": "phpunit"
+    }
+}
