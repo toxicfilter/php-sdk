@@ -1,6 +1,6 @@
-![ToxicFilter PHP](https://raw.githubusercontent.com/toxicfilter/php-sdk/main/art/banner.png)
+![ToxicFilter PHP SDK](https://raw.githubusercontent.com/toxicfilter/php-sdk/main/art/banner.png)
 
-# ToxicFilter for PHP
+# ToxicFilter PHP SDK
 
 The official PHP client for [ToxicFilter](https://toxicfilter.com).
 
@@ -242,4 +242,4 @@ the moderation API this client speaks to.
 
 ## License
 
-The ToxicFilter PHP client is open-sourced software licensed under the [MIT license](LICENSE).
+The ToxicFilter PHP SDK is open-sourced software licensed under the [MIT license](LICENSE).
