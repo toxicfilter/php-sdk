@@ -20,7 +20,7 @@ $verdict = $tf->text('Check this message', [
 ]);
 
 if ($verdict->blocked()) {
-    return refuse();
+    return refuse($verdict->reason());   // the first reason; reasons() has them all
 }
 
 if ($verdict->needsReview()) {

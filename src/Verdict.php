@@ -131,6 +131,22 @@ class Verdict
         ));
     }
 
+    /**
+     * The first reason, or null when there is none.
+     *
+     * @return string|null
+     */
+    public function reason(): ?string
+    {
+        foreach ($this->reasons() as $reason) {
+            if ($reason !== '') {
+                return $reason;
+            }
+        }
+
+        return null;
+    }
+
     /** @return list<array<string, mixed>> Every finding, with its evidence. */
     public function signals(): array
     {

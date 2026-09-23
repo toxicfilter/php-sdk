@@ -19,7 +19,7 @@ use ToxicFilter\Exception\ServerError;
  */
 class Client
 {
-    public const VERSION = '1.1.1';
+    public const VERSION = '1.2.0';
 
     private Transport $transport;
 

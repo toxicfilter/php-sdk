@@ -231,4 +231,17 @@ final class ReadableFieldsTest extends TestCase
         $this->assertSame('HTTPS://cdn.example.com/photo.jpg', $transport->calls[0]['body']['url'] ?? null);
         $this->assertArrayNotHasKey('data', $transport->calls[0]['body']);
     }
+
+    public function test_reason_is_the_first_reason_or_null(): void
+    {
+        $verdict = new Verdict(['decision' => 'block', 'signals' => [
+            ['category' => 'spam', 'reason' => ''],
+            ['category' => 'spam', 'reason' => 'Contains a referral link'],
+            ['category' => 'personal_data', 'reason' => 'Contains a phone number'],
+        ]]);
+
+        $this->assertSame('Contains a referral link', $verdict->reason());
+        $this->assertCount(3, $verdict->reasons());
+        $this->assertNull((new Verdict(['decision' => 'allow', 'signals' => []]))->reason());
+    }
 }
