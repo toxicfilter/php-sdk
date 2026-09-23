@@ -19,7 +19,7 @@ use ToxicFilter\Exception\ServerError;
  */
 class Client
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.0.1';
 
     private Transport $transport;
 
@@ -104,7 +104,9 @@ class Client
         // Not a guess: the endpoint's `url` accepts http and https and nothing else, so
         // anything that is not one of those is bytes by elimination. That is what makes
         // one argument safe here, and `imageData()` is the explicit way to say it.
-        if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+        // Case-insensitively, as schemes are: `HTTPS://` sent as bytes would have the
+        // service decode an address and find text where a picture should be.
+        if (preg_match('#^https?://#i', $url) !== 1) {
             return $this->imageData($url, $options);
         }
 
@@ -218,6 +220,26 @@ class Client
     public function batchStatus(string $batchId, array $query = []): BatchResult
     {
         return new BatchResult($this->get('/api/v1/batches/' . rawurlencode($batchId), $query));
+    }
+
+    /**
+     * The account's most recent batches, newest first, each summarised without its rows.
+     *
+     * Without it a caller who lost a batch id (a crashed worker, a restarted deploy) had no
+     * way to find the backfill it had already paid for. Read one in full with
+     * `batchStatus()`.
+     *
+     * @param array<string, mixed> $query `limit`, 1 to 100 (20 by default).
+     * @return list<BatchResult>
+     */
+    public function batches(array $query = []): array
+    {
+        $body = $this->get('/api/v1/batches', $query);
+
+        return array_values(array_map(
+            static fn ($row) => new BatchResult((array) $row),
+            (array) ($body['batches'] ?? []),
+        ));
     }
 
     /**
@@ -389,13 +411,25 @@ class Client
         while (true) {
             try {
                 $response = $this->transport->send($method, $url, $headers, $body);
-                $decoded = $this->decode($response['body']);
+                $status = $response['status'];
 
-                if ($response['status'] < 400) {
-                    return $decoded;
+                // Only a 2xx carrying a JSON object is an answer. Anything else reaching
+                // this point used to be decoded to an empty array and returned, and an
+                // empty verdict read as `allow`: an http base URL (a 301 the transport
+                // rightly does not follow) or a proxy's HTML page published everything.
+                if ($status >= 200 && $status < 300) {
+                    return $this->answer($status, $response['body']);
                 }
 
-                throw $this->error($response['status'], $decoded);
+                if ($status >= 300 && $status < 400) {
+                    throw new ServerError(sprintf(
+                        'The API answered with a redirect (%d) instead of a verdict. Check that the base URL is right and uses https (%s).',
+                        $status,
+                        $this->baseUrl,
+                    ), $status);
+                }
+
+                throw $this->error($status, $this->decode($response['body']));
             } catch (ApiError $e) {
                 if (! $e->isRetryable() || $attempt >= $this->retries) {
                     throw $e;
@@ -428,6 +462,40 @@ class Client
     }
 
     /**
+     * The body of a successful response, or an error saying why it is not one.
+     *
+     * Checked for an OBJECT rather than for anything that decodes: `[]`, `null` and `"ok"`
+     * are all valid JSON and none of them is something the API sends, and treating them as
+     * an empty answer is exactly how a missing verdict turns into a permissive one.
+     * Retryable, because what produces these (a proxy mid-deploy, a gateway page) tends to
+     * pass.
+     *
+     * @param int $status
+     * @param string $body
+     * @return array<string, mixed>
+     * @throws ServerError When the body is empty, not JSON, or not a JSON object.
+     */
+    private function answer(int $status, string $body): array
+    {
+        $decoded = json_decode($body);
+
+        if (! $decoded instanceof \stdClass) {
+            throw new ServerError(sprintf(
+                'The API answered %d with %s instead of a JSON object. Something between you and it (a proxy, a gateway, the wrong base URL) answered in its place.',
+                $status,
+                trim($body) === '' ? 'an empty body' : 'a body that is not one',
+            ), $status);
+        }
+
+        return (array) json_decode($body, true);
+    }
+
+    /**
+     * An error body, decoded as far as it goes.
+     *
+     * Lenient on purpose, unlike `answer()`: the status already says what happened, and an
+     * error page that is not JSON must still become the right exception for its status.
+     *
      * @param string $body
      * @return array<string, mixed>
      */

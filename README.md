@@ -49,6 +49,12 @@ honouring it beats guessing: the service knows when its own window turns over. I
 by `maxWait` (30 seconds by default) all the same, because a number on the wire should not
 decide how long your own request hangs.
 
+**Never reads anything but an answer as `allow`.** A redirect (a base URL on `http://`,
+which this client deliberately does not follow), an empty body, or a proxy's HTML page is a
+`ServerError`, retried like one, and never a verdict. A verdict with no decision, or one the
+client does not know, throws from `decision()`, `allowed()`, `needsReview()` and `blocked()`
+rather than defaulting to anything.
+
 ```php
 use ToxicFilter\Exception\QuotaExhausted;
 use ToxicFilter\Exception\RateLimited;
@@ -69,6 +75,14 @@ A verdict reached without the model because the provider was failing comes back 
 `degraded` set, and is billed as the cheap call. It is a separate field from `used_ai` on
 purpose: one says the cheap detectors were enough, the other says nobody read it, and only
 the first is reassuring. Hold or queue what matters to you when you see it.
+
+In a conversation the model is sometimes asked and deliberately not run (it reads a message
+when the free detectors found something, when a lead type is half there, or every few
+messages). That is a third statement, and it has its own accessor:
+
+```php
+$verdict->modelSkipped();   // 'conversation_sampling', or null when the model was not skipped
+```
 
 ## Rules without a policy
 
@@ -166,12 +180,16 @@ while ($page->hasMore()) {
     $page = $tf->batchStatus($queued->id(), ['after' => $page->nextAfter()]);
 }
 
+// The account's recent batches, newest first, for the id you did not keep.
+foreach ($tf->batches(['limit' => 20]) as $batch) { $batch->id(); $batch->status(); }
+
 // The review queue.
 $queue = $tf->records(['state' => 'open']);
 $tf->resolve($id, 'approved', 'ana@example.com');
 $tf->feedback($id, 'false_positive');   // free, and the only honest measure we have
 
-// And what a held verdict has had done to it.
+// And what a held verdict has had done to it. Only record(), resolve() and feedback()
+// carry this: the rows of records() do not, so read one in full to see its state.
 $verdict = $tf->record($id);
 $verdict->reviewState();         // open, approved or rejected
 $verdict->resolvedBy();          // your own name for whoever decided
@@ -194,7 +212,7 @@ use ToxicFilter\Webhooks;
 
 $event = Webhooks::event(
     file_get_contents('php://input'),          // the RAW body
-    $_SERVER['HTTP_X_TOXICFILTER_SIGNATURE'],
+    $_SERVER['HTTP_X_TOXICFILTER_SIGNATURE'] ?? '',   // absent is a failed check, not a crash
     getenv('TOXICFILTER_WEBHOOK_SECRET'),
 );
 

@@ -182,4 +182,53 @@ final class ReadableFieldsTest extends TestCase
     {
         $this->assertNull((new BatchResult(['batch_id' => 'b', 'status' => 'completed']))->nextAfter());
     }
+
+    /**
+     * The model deliberately not reading this message looks, from the decision alone,
+     * exactly like the cheap detectors settling it. The API says which one it was.
+     */
+    public function test_it_says_when_the_model_was_asked_and_deliberately_not_run(): void
+    {
+        [$tf] = $this->client([[200, $this->verdict([
+            'model' => ['asked' => true, 'read' => false, 'why' => 'conversation_sampling'],
+        ])]]);
+
+        $this->assertSame('conversation_sampling', $tf->conversation([['author' => 'a', 'content' => 'hi']])->modelSkipped());
+    }
+
+    public function test_a_verdict_the_model_was_not_skipped_on_says_nothing(): void
+    {
+        $this->assertNull((new Verdict($this->verdict()))->modelSkipped());
+    }
+
+    public function test_it_lists_the_recent_batches(): void
+    {
+        [$tf, $transport] = $this->client([[200, ['batches' => [
+            ['batch_id' => 'batch_02', 'status' => 'running', 'count' => 10, 'errors' => []],
+            ['batch_id' => 'batch_01', 'status' => 'completed', 'count' => 4, 'errors' => []],
+        ]]]]);
+
+        $batches = $tf->batches(['limit' => 2]);
+
+        $this->assertSame('GET', $transport->calls[0]['method']);
+        $this->assertSame('https://example.test/api/v1/batches?limit=2', $transport->calls[0]['url']);
+        $this->assertCount(2, $batches);
+        $this->assertInstanceOf(BatchResult::class, $batches[0]);
+        $this->assertSame('batch_02', $batches[0]->id());
+        $this->assertTrue($batches[1]->finished());
+    }
+
+    /**
+     * A scheme is case-insensitive, so `HTTPS://` is an address. Sent as bytes, the service
+     * would decode the URL itself and find text where a picture should be.
+     */
+    public function test_an_address_in_capitals_is_still_an_address(): void
+    {
+        [$tf, $transport] = $this->client([[200, $this->verdict()]]);
+
+        $tf->image('HTTPS://cdn.example.com/photo.jpg');
+
+        $this->assertSame('HTTPS://cdn.example.com/photo.jpg', $transport->calls[0]['body']['url'] ?? null);
+        $this->assertArrayNotHasKey('data', $transport->calls[0]['body']);
+    }
 }

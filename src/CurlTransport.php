@@ -60,7 +60,9 @@ class CurlTransport implements Transport
         $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         $error = curl_error($handle);
 
-        curl_close($handle);
+        // No `curl_close`: a no-op since PHP 8.0, when handles became objects freed with
+        // their last reference, and deprecated in 8.5, where it would print a notice into
+        // the host application's log on every call.
 
         if ($response === false) {
             // Reported as a server error rather than its own type, because the client

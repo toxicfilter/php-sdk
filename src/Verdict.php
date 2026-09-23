@@ -2,6 +2,8 @@
 
 namespace ToxicFilter;
 
+use ToxicFilter\Exception\ServerError;
+
 /**
  * One answer from the API.
  *
@@ -17,10 +19,37 @@ class Verdict
     {
     }
 
-    /** @return string `allow`, `review` or `block`. */
+    /** The three answers the API gives. Anything else is not an answer. */
+    private const DECISIONS = ['allow', 'review', 'block'];
+
+    /**
+     * What to do with it: `allow`, `review` or `block`.
+     *
+     * Never guessed. 1.0.0 read a missing decision as `allow`, so anything that reached a
+     * `Verdict` without one (a proxy's page, a body cut short, a field renamed) meant
+     * "publish it". A value outside the three is refused too: `allowed()`, `needsReview()`
+     * and `blocked()` would all be false, and code written the obvious way (refuse if
+     * blocked, hold if review, otherwise publish) would publish it.
+     *
+     * @return string
+     * @throws ServerError When the answer carries no decision, or one this client does not know.
+     */
     public function decision(): string
     {
-        return (string) ($this->raw['decision'] ?? 'allow');
+        $decision = $this->raw['decision'] ?? null;
+
+        if (! is_string($decision) || ! in_array($decision, self::DECISIONS, true)) {
+            throw new ServerError(
+                $decision === null
+                    ? 'The answer carried no decision, so nothing can be said about this content. It is not an allow.'
+                    : sprintf('The answer carried a decision this client does not know (%s). It is not an allow.', is_scalar($decision) ? (string) $decision : gettype($decision)),
+                0,
+                null,
+                $this->raw,
+            );
+        }
+
+        return $decision;
     }
 
     /** @return bool Nothing crossed a line. Publish it. */
@@ -198,6 +227,29 @@ class Verdict
     }
 
     /**
+     * Why the model did not read this although it was asked to, or null when it was not
+     * skipped.
+     *
+     * Today the one reason is `conversation_sampling`: in a conversation the model reads a
+     * message when the free detectors found something, a lead type is half there, or every
+     * few messages. Without this, a message deliberately left unread looks exactly like one
+     * the cheap detectors settled, and `degraded()` (nobody COULD read it) is a different
+     * statement again.
+     *
+     * @return string|null
+     */
+    public function modelSkipped(): ?string
+    {
+        $model = $this->raw['model'] ?? null;
+
+        if (! is_array($model) || ($model['read'] ?? null) !== false) {
+            return null;
+        }
+
+        return is_string($model['why'] ?? null) ? $model['why'] : 'unknown';
+    }
+
+    /**
      * Which rules produced this, by slug and version. Worth logging: only a versioned
      * verdict can be argued about six months later.
      *
@@ -270,7 +322,9 @@ class Verdict
      * Where this verdict stands in the queue: the state, who decided and when.
      *
      * Only `review` opens an entry, so a verdict that was allowed outright has nothing
-     * here. Filled by `records()` and `record()` rather than by the call that produced it.
+     * here. Filled only by `record()`, `resolve()` and `feedback()`: neither the call that
+     * produced the verdict nor the rows of `records()` carry it, so an empty array there
+     * means "not asked", not "not reviewed".
      *
      * @return array<string, mixed>
      */

@@ -2,7 +2,7 @@
 /.phpunit.result.cache
 /.phpunit.cache
 
-# Una librería no comitea su lock: lo resuelve la aplicación que la instala, y aquí solo
-# serviría para convertir cada actualización de PHPUnit en un commit de ruido. El CI hace
-# `composer update` a propósito, por lo mismo.
+# A library does not commit its lock: the application that installs it resolves one, and
+# here it would only turn every PHPUnit update into a noise commit. The CI runs
+# `composer update` on purpose, for the same reason.
 /composer.lock

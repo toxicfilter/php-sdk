@@ -7,8 +7,7 @@ namespace ToxicFilter;
  *
  * One bad item is an item and not a batch: the API answers 200 with the failure filed
  * where that item was, so this object never throws for a single bad element and gives you
- * both
- * halves separately.
+ * both halves separately.
  */
 class BatchResult
 {
@@ -58,20 +57,43 @@ class BatchResult
     }
 
     /**
-     * The items that never became a verdict, by position.
+     * The items that never became a verdict, by the position they were sent in.
+     *
+     * Read from BOTH lists the API uses. A batch read back with `batchStatus()` always has
+     * `results` (the verdicts filed so far) and keeps its item errors in `errors`, so
+     * reading `errors` only when `results` was missing reported every failure of an async
+     * batch as none. A sync batch carries its rejected items in both, and the position is
+     * what makes them one failure rather than two.
+     *
+     * An error that belongs to no single item, such as a whole chunk the workers could not
+     * run (`chunk_failed`), has no position and sits under a NEGATIVE key, -1, -2, and so
+     * on, in the order it arrived. A real position is never negative, so it can never
+     * overwrite one, and `$index >= 0` tells the two apart.
      *
      * @return array<int, array<string, mixed>>
      */
     public function failures(): array
     {
         $out = [];
+        $unplaced = 0;
 
-        foreach ((array) ($this->raw['results'] ?? $this->raw['errors'] ?? []) as $row) {
-            if (! isset($row['error'])) {
-                continue;
+        foreach ([$this->raw['results'] ?? [], $this->raw['errors'] ?? []] as $rows) {
+            foreach ((array) $rows as $row) {
+                if (! is_array($row) || ! isset($row['error'])) {
+                    continue;
+                }
+
+                $error = is_array($row['error']) ? $row['error'] : ['message' => (string) $row['error']];
+
+                if (! isset($row['index']) || ! is_numeric($row['index'])) {
+                    $out[-(++$unplaced)] = $error;
+
+                    continue;
+                }
+
+                // First one wins: the same item in both lists is the same failure.
+                $out[(int) $row['index']] ??= $error;
             }
-
-            $out[(int) ($row['index'] ?? count($out))] = (array) $row['error'];
         }
 
         return $out;

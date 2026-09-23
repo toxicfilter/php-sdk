@@ -3,6 +3,21 @@
     "description": "The official PHP client for the ToxicFilter content moderation API.",
     "type": "library",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Edu Lazaro",
+            "homepage": "https://edulazaro.com"
+        }
+    ],
+    "keywords": [
+        "moderation",
+        "content-moderation",
+        "toxicity",
+        "spam",
+        "api",
+        "client",
+        "toxicfilter"
+    ],
     "homepage": "https://toxicfilter.com/docs/sdks",
     "support": {
         "issues": "https://github.com/toxicfilter/php-sdk/issues",
@@ -27,11 +42,11 @@
             "ToxicFilter\\Tests\\": "tests/"
         }
     },
-    "config": {
-        "sort-packages": true
-    },
-    "minimum-stability": "stable",
     "scripts": {
         "test": "phpunit"
+    },
+    "minimum-stability": "stable",
+    "config": {
+        "sort-packages": true
     }
 }
