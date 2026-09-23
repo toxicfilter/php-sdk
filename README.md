@@ -30,6 +30,29 @@ if ($verdict->needsReview()) {
 publish();
 ```
 
+## Reading a verdict
+
+```php
+$verdict->decision();         // 'allow', 'review' or 'block'
+$verdict->allowed();          // and needsReview(), blocked()
+$verdict->reason();           // the first reason, or null
+$verdict->reasons();          // every reason, in words you can show the author
+$verdict->flagged();          // the categories that crossed a line: ['spam']
+$verdict->scores();           // every category that scored, 0 to 1
+$verdict->score('spam');      // one of them, 0.0 when it did not score
+$verdict->signals();          // every finding, with its evidence
+$verdict->topics();           // what it is ABOUT, per subject: ['gambling' => 0.82]
+$verdict->topic('crypto');
+$verdict->id();               // mod_..., the name of this decision
+$verdict->reference();        // your own id, as you sent it
+$verdict->usedAi();           // whether the model read it
+$verdict->cached();           // answered from a verdict already reached
+$verdict->charged();          // credits this call cost
+$verdict->creditsRemaining();
+$verdict->policy();           // the rules it was judged under: slug and version
+$verdict->tookMs();
+```
+
 Three decisions, not two. `review` is where the uncertainty is allowed to live: forced to
 choose between publishing and deleting, a threshold set safely deletes real posts and one
 set kindly publishes the abuse. There is no `isToxic()` here for the same reason: fifteen
@@ -54,6 +77,20 @@ which this client deliberately does not follow), an empty body, or a proxy's HTM
 `ServerError`, retried like one, and never a verdict. A verdict with no decision, or one the
 client does not know, throws from `decision()`, `allowed()`, `needsReview()` and `blocked()`
 rather than defaulting to anything.
+
+Every failure is a type you can branch on:
+
+| Status | Exception | Retried |
+|---|---|---|
+| 401 | `AuthenticationError` | no |
+| 402 | `QuotaExhausted`, with `remaining()`, `required()`, `renewsAt()` | never |
+| 404 | `NotFound` | no |
+| 422 | `InvalidRequest`, with `fields()` | no |
+| 429 | `RateLimited`, with `retryAfter()` | yes |
+| 409, 5xx, network, not an answer | `ServerError` | yes |
+
+All of them extend `ToxicFilter\Exception\ApiError`, which carries `status`, `errorCode` and
+the decoded `payload`.
 
 ```php
 use ToxicFilter\Exception\QuotaExhausted;
@@ -166,11 +203,12 @@ $batch = $tf->batch([
 ], ['ai' => false]);
 
 foreach ($batch->verdicts() as $index => $verdict) { /* ... */ }
-foreach ($batch->failures() as $index => $error) { /* ... */ }
+foreach ($batch->failures() as $index => $error) { /* ... */ }   // negative keys: a failure no item owns
 
-// A backfill: queued, answered immediately, polled or webhooked.
-$queued = $tf->batchAsync($tenThousandComments);
-$tf->batchStatus($queued->id());
+// A backfill: up to 1,000 items per call, queued, answered immediately, polled or webhooked.
+$queued = $tf->batchAsync($aThousandComments);
+$status = $tf->batchStatus($queued->id());
+$status->finished();          // and status(), count(), processed(), failed(), creditsCharged()
 
 // A backfill read back a page at a time. A cursor, not an offset: rows appear as workers
 // finish them, so an offset skips whatever was inserted behind it.
@@ -222,6 +260,18 @@ if ($event === null) {
 }
 ```
 
+## Configuration
+
+```php
+$tf = new Client(
+    key: getenv('TOXICFILTER_KEY'),        // tf_live_… or tf_test_… (never charged)
+    baseUrl: 'https://toxicfilter.com',    // https: redirects are never followed
+    retries: 2,                            // for 429 and 5xx; a 402 is never retried
+    timeout: 10,                           // seconds per attempt
+    maxWait: 30,                           // ceiling on the wait between attempts
+);
+```
+
 ## Notes
 
 Requires PHP 8.1 and `ext-curl`. No other dependencies: a client for one small API is not
@@ -230,28 +280,15 @@ project. Bring your own by implementing `ToxicFilter\Transport`.
 
 ## How this is tested
 
-Two suites, answering two different questions.
-
 ```bash
 composer install
 composer test
 ```
 
-That one runs here, with no network and no framework, over a stub transport. It covers what
-a caller cannot see and would otherwise discover from an invoice: what is retried, what
-never is, that a retry reuses its idempotency key while two calls do not, and that bytes go
-out as bytes.
-
-The second one lives in the ToxicFilter application, which keeps this package as a Composer
-`path` repository and implements the `Transport` interface below by dispatching straight
-into its own test client. Every method here then runs against the real routes, middleware
-and responses, so a change on either side that would break the other fails a build rather
-than an install.
-
-The split is deliberate. A stub agrees with whatever it is handed, so it can prove this
-client behaves correctly and can never prove it agrees with the API about a field name.
-Fixtures alone would match the API on the day they were written and drift silently
-afterwards.
+No network and no framework: a stub transport answers like the API does. It covers what a
+caller cannot see and would otherwise discover from an invoice: what is retried, what never
+is, that a retry reuses its idempotency key while two calls do not, that anything but an
+answer is refused, and that bytes go out as bytes.
 
 ## Author
 
