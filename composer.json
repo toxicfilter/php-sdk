@@ -18,11 +18,11 @@
         "client",
         "toxicfilter"
     ],
-    "homepage": "https://toxicfilter.com/docs/sdks",
+    "homepage": "https://toxicfilter.com/docs/sdks/php",
     "support": {
         "issues": "https://github.com/toxicfilter/php-sdk/issues",
         "source": "https://github.com/toxicfilter/php-sdk",
-        "docs": "https://toxicfilter.com/docs/sdks"
+        "docs": "https://toxicfilter.com/docs/sdks/php"
     },
     "require": {
         "php": "^8.1",
