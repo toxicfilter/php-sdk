@@ -30,6 +30,21 @@ if ($verdict->needsReview()) {
 publish();
 ```
 
+## Using Laravel?
+
+[Laratox](https://github.com/edulazaro/laratox) wraps this client for Laravel: a validation
+rule, a facade that reads as a sentence and a fake for your tests.
+
+```bash
+composer require edulazaro/laratox
+```
+
+```php
+ToxicFilter::text($comment->body)->check()->blocked();
+
+$request->validate(['body' => ['required', Moderated::text()]]);
+```
+
 ## Reading a verdict
 
 ```php
