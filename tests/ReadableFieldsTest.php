@@ -244,4 +244,23 @@ final class ReadableFieldsTest extends TestCase
         $this->assertCount(3, $verdict->reasons());
         $this->assertNull((new Verdict(['decision' => 'allow', 'signals' => []]))->reason());
     }
+
+    public function test_the_policy_says_when_the_calls_rules_were_laid_over_it(): void
+    {
+        [$tf] = $this->client([[200, $this->verdict([
+            'policy' => ['slug' => 'house', 'version' => 4, 'overridden' => true],
+        ])]]);
+
+        $this->assertSame(
+            ['slug' => 'house', 'version' => 4, 'overridden' => true],
+            $tf->text('anything', ['policy' => 'house', 'rules' => ['thresholds' => ['spam' => ['block' => 0.6]]]])->policy(),
+        );
+    }
+
+    public function test_a_policy_used_as_stored_is_not_overridden(): void
+    {
+        [$tf] = $this->client([[200, $this->verdict()]]);
+
+        $this->assertFalse($tf->text('anything')->policy()['overridden']);
+    }
 }

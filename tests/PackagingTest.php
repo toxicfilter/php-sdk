@@ -80,7 +80,7 @@ class PackagingTest extends TestCase
 
     public function test_the_version_is_the_one_being_released(): void
     {
-        $this->assertSame('1.2.0', \ToxicFilter\Client::VERSION);
+        $this->assertSame('1.3.0', \ToxicFilter\Client::VERSION);
     }
 
     /**

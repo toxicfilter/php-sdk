@@ -133,9 +133,19 @@ $verdict = $tf->text($comment, [
 ```
 
 A category you did not mention still scores and still appears in `signals`; it just does not
-decide anything. `policy` and `rules` in the same call is a `422`, and so is a name that is
-not a real category, subject or lead type: a line that acts on nothing looks exactly like a
-line that works.
+decide anything. A name that is not a real category, subject or lead type is a `422`: a line
+that acts on nothing looks exactly like a line that works.
+
+Send `rules` together with a `policy` and they are laid over it instead: the call wins for
+what it names, the policy keeps everything else, and words are added to its lists.
+`$verdict->policy()` then has `'overridden' => true`.
+
+```php
+$verdict = $tf->text($comment, [
+    'policy' => 'comments',
+    'rules' => ['thresholds' => ['spam' => ['block' => 0.6]]],
+]);
+```
 
 ## The rest of the answer
 

@@ -267,15 +267,17 @@ class Verdict
 
     /**
      * Which rules produced this, by slug and version. Worth logging: only a versioned
-     * verdict can be argued about six months later.
+     * verdict can be argued about six months later. `overridden` is true when the call's
+     * own `rules` were laid over the policy.
      *
-     * @return array{slug: string, version: int}
+     * @return array{slug: string, version: int, overridden: bool}
      */
     public function policy(): array
     {
         return [
             'slug' => (string) ($this->raw['policy']['slug'] ?? 'default'),
             'version' => (int) ($this->raw['policy']['version'] ?? 0),
+            'overridden' => (bool) ($this->raw['policy']['overridden'] ?? false),
         ];
     }
 
