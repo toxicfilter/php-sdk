@@ -263,4 +263,28 @@ final class ReadableFieldsTest extends TestCase
 
         $this->assertFalse($tf->text('anything')->policy()['overridden']);
     }
+
+    public function test_it_sends_the_project_and_reads_it_back(): void
+    {
+        [$tf, $transport] = $this->client([[200, $this->verdict(['project' => 'forum'])]]);
+
+        $verdict = $tf->text('hello', ['project' => 'forum']);
+
+        $this->assertSame('forum', $verdict->project());
+        $this->assertSame('forum', $transport->calls[0]['body']['project']);
+    }
+
+    public function test_a_verdict_without_a_project_says_null(): void
+    {
+        [$tf] = $this->client([[200, $this->verdict()]]);
+
+        $this->assertNull($tf->text('hello')->project());
+    }
+
+    public function test_a_batch_reads_its_project(): void
+    {
+        [$tf] = $this->client([[200, ['batch_id' => 'bat_1', 'project' => 'forum', 'status' => 'completed', 'results' => []]]]);
+
+        $this->assertSame('forum', $tf->batch([['kind' => 'text', 'content' => 'hi']], ['project' => 'forum'])->project());
+    }
 }

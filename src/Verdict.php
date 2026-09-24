@@ -91,6 +91,18 @@ class Verdict
     }
 
     /**
+     * The project the verdict was filed under: the one you named, or your default.
+     *
+     * @return string|null
+     */
+    public function project(): ?string
+    {
+        $project = $this->raw['project'] ?? null;
+
+        return is_string($project) ? $project : null;
+    }
+
+    /**
      * Everything that crossed a line, worst first.
      *
      * A category by its own name; a subject or lead type prefixed `topic:` or `lead:`,

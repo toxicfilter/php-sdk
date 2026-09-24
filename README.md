@@ -45,11 +45,12 @@ $verdict->topics();           // what it is ABOUT, per subject: ['gambling' => 0
 $verdict->topic('crypto');
 $verdict->id();               // mod_..., the name of this decision
 $verdict->reference();        // your own id, as you sent it
+$verdict->project();          // the project it was filed under
 $verdict->usedAi();           // whether the model read it
 $verdict->cached();           // answered from a verdict already reached
 $verdict->charged();          // credits this call cost
 $verdict->creditsRemaining();
-$verdict->policy();           // the rules it was judged under: slug and version
+$verdict->policy();           // the rules it was judged under: slug, version, overridden
 $verdict->tookMs();
 ```
 
@@ -120,6 +121,23 @@ messages). That is a third statement, and it has its own accessor:
 ```php
 $verdict->modelSkipped();   // 'conversation_sampling', or null when the model was not skipped
 ```
+
+## Projects
+
+An organization can moderate several sites, one project each. Name the project and the
+verdict is filed there, with its own activity, review queue and webhooks; leave it out and it
+goes to your default project. The keys and the credits are the organization's.
+
+```php
+$verdict = $tf->text($comment, ['project' => 'forum']);
+$verdict->project();   // 'forum'
+
+$tf->batch($items, ['project' => 'forum']);          // the whole batch, on the envelope
+$tf->records(['project' => 'forum']);                // one project's queue
+$tf->batches(['project' => 'forum']);                // its recent batches
+```
+
+A project that does not exist is refused with an `InvalidRequest` (`unknown_project`).
 
 ## Rules without a policy
 

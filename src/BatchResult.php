@@ -24,6 +24,14 @@ class BatchResult
         return (string) ($this->raw['batch_id'] ?? '');
     }
 
+    /** @return string|null The project the batch was filed under. */
+    public function project(): ?string
+    {
+        $project = $this->raw['project'] ?? null;
+
+        return is_string($project) ? $project : null;
+    }
+
     /** @return string `queued`, `running` or `completed`. */
     public function status(): string
     {
