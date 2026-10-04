@@ -306,6 +306,88 @@ class Client
     }
 
     /**
+     * The statement of reasons for a verdict already filed, rebuilt from the record and the
+     * rules version kept on it, so it says what was sent even after your rules changed.
+     *
+     * A verdict that restricts nothing has none, and that is a 409 `no_restriction`, raised
+     * as an `ApiError` rather than retried.
+     *
+     * @param string $id
+     * @param string|null $locale `es`, `pt`, `fr`… English when absent or unknown.
+     * @return array<string, mixed>
+     */
+    public function statement(string $id, ?string $locale = null): array
+    {
+        $body = $this->get(
+            '/api/v1/records/' . rawurlencode($id) . '/statement',
+            $locale === null ? [] : ['locale' => $locale],
+        );
+
+        return (array) ($body['statement'] ?? []);
+    }
+
+    /**
+     * The author contests the restriction. It waits in the review queue under Appeals until
+     * a person decides it with `resolveAppeal()`.
+     *
+     * One appeal per verdict: a second, one on a verdict that restricts nothing, or one past
+     * the six-month window is a 409 (`appeal_filed`, `no_restriction`,
+     * `appeal_window_closed`), raised as an `ApiError`.
+     *
+     * @param string $id
+     * @param string|null $reason The author's own words, if a person should read them.
+     * @return Verdict
+     */
+    public function appeal(string $id, ?string $reason = null): Verdict
+    {
+        return new Verdict($this->post('/api/v1/records/' . rawurlencode($id) . '/appeal', array_filter([
+            'reason' => $reason,
+        ], static fn ($v) => $v !== null)));
+    }
+
+    /**
+     * A person decides an appeal. The answer's `appealDecision()` is the reasoned decision,
+     * ready to send to the person who appealed.
+     *
+     * @param string $id
+     * @param string $outcome `upheld` or `reversed`.
+     * @param string $moderator Your own name for whoever decided.
+     * @param string $explanation Why, in their words.
+     * @param string|null $locale The language of the decision text.
+     * @return Verdict
+     */
+    public function resolveAppeal(string $id, string $outcome, string $moderator, string $explanation, ?string $locale = null): Verdict
+    {
+        return new Verdict($this->post('/api/v1/records/' . rawurlencode($id) . '/appeal/resolve', array_filter([
+            'outcome' => $outcome,
+            'moderator' => $moderator,
+            'explanation' => $explanation,
+            'locale' => $locale,
+        ], static fn ($v) => $v !== null)));
+    }
+
+    /**
+     * A period's statements of reasons, each already in the shape the Commission's DSA
+     * Transparency Database takes. Up to 31 days and a hundred per page: pass `next` back as
+     * `after` for the following one.
+     *
+     * @param string $since `YYYY-MM-DD`.
+     * @param string|null $until `YYYY-MM-DD`; the same day as `since` when absent.
+     * @param string|null $project A project's slug, or every project.
+     * @param int|null $after
+     * @return array{statements: list<array<string, mixed>>, next: int|null}
+     */
+    public function transparency(string $since, ?string $until = null, ?string $project = null, ?int $after = null): array
+    {
+        return $this->get('/api/v1/statements/transparency', array_filter([
+            'since' => $since,
+            'until' => $until,
+            'project' => $project,
+            'after' => $after,
+        ], static fn ($v) => $v !== null));
+    }
+
+    /**
      * Your keys: prefixes, modes and last use. Never a secret, since the rows hold hashes.
      *
      * @return array<string, mixed>
@@ -525,9 +607,11 @@ class Client
             $status === 404 => new NotFound($message, $status, $code, $payload),
             $status === 422 => new InvalidRequest($message, $status, $code, $payload),
             $status === 429 => new RateLimited($message, $status, $code, $payload),
-            // 409 is `idempotency_in_flight`: the earlier attempt at this very call is
-            // still running. Waiting and asking again is exactly right.
-            $status === 409, $status >= 500 => new ServerError($message, $status, $code, $payload),
+            // A 409 `idempotency_in_flight` is the earlier attempt at this very call still
+            // running, and waiting and asking again is exactly right. Every other 409 is a
+            // refusal about the record's state (`appeal_filed`, `no_restriction`), which
+            // asking again cannot change.
+            $status === 409 && $code === 'idempotency_in_flight', $status >= 500 => new ServerError($message, $status, $code, $payload),
             default => new ApiError($message, $status, $code, $payload),
         };
     }

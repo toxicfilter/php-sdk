@@ -409,6 +409,73 @@ class Verdict
     }
 
     /**
+     * The statement of reasons owed to the author of restricted content (DSA, art. 17):
+     * `restriction`, `territory`, `duration`, `facts`, `automated`, `ground`, `redress`,
+     * `locale` and `text`. Null when the project does not write statements or this verdict
+     * restricts nothing.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function statement(): ?array
+    {
+        $statement = $this->raw['statement'] ?? null;
+
+        return is_array($statement) ? $statement : null;
+    }
+
+    /**
+     * The statement in plain words, ready to show or send to the author.
+     *
+     * @return string|null
+     */
+    public function statementText(): ?string
+    {
+        $text = $this->statement()['text'] ?? null;
+
+        return is_string($text) ? $text : null;
+    }
+
+    /**
+     * The appeal against this verdict: `state`, `filed_at`, `reason`, `resolved_at`,
+     * `resolved_by` and `explanation`. Null when nobody has appealed, and only on the
+     * answers about a record (`record()`, `resolve()`, `appeal()`, `resolveAppeal()`).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function appeal(): ?array
+    {
+        $appeal = $this->raw['appeal'] ?? null;
+
+        return is_array($appeal) ? $appeal : null;
+    }
+
+    /**
+     * The reasoned decision on an appeal, ready to send to the person who appealed. Only
+     * `resolveAppeal()` carries it.
+     *
+     * @return string|null
+     */
+    public function appealDecision(): ?string
+    {
+        $decision = $this->raw['appeal_decision'] ?? null;
+
+        return is_string($decision) ? $decision : null;
+    }
+
+    /**
+     * Where the statement was filed with the Commission's Transparency Database: `uuid`
+     * and `submitted_at`. Null when it has not been.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function transparency(): ?array
+    {
+        $transparency = $this->raw['transparency'] ?? null;
+
+        return is_array($transparency) ? $transparency : null;
+    }
+
+    /**
      * The content, when your policy kept it and it has not expired. Null almost everywhere:
      * `retain_hours` is 0 by default, and only `record()` ever fills this.
      *

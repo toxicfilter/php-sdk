@@ -103,7 +103,8 @@ Every failure is a type you can branch on:
 | 404 | `NotFound` | no |
 | 422 | `InvalidRequest`, with `fields()` | no |
 | 429 | `RateLimited`, with `retryAfter()` | yes |
-| 409, 5xx, network, not an answer | `ServerError` | yes |
+| 409 `idempotency_in_flight`, 5xx, network, not an answer | `ServerError` | yes |
+| any other 409 (`appeal_filed`, `no_restriction`, ...) | `ApiError` | no |
 
 All of them extend `ToxicFilter\Exception\ApiError`, which carries `status`, `errorCode` and
 the decoded `payload`.
@@ -283,6 +284,42 @@ $tf->revokeKey($id);          // including the one you are calling with. There i
 $tf->usage();   // credits, windows, prices. Works at zero credits.
 $tf->ping();
 ```
+
+## Statements of reasons and appeals
+
+Switch statements on for a project in the panel (Settings, then Statements), give your policy rules a message, and
+every block comes back with a statement of reasons: what was done, why, whether it was
+automated, which of your rules it broke and how to contest it. It helps you produce what
+articles 17, 20 and 24(5) of the Digital Services Act ask for; it is not legal advice.
+
+```php
+$verdict = $tf->text($comment, ['project' => 'forum']);
+
+$verdict->statement();       // restriction, territory, facts, automated, ground, redress, text
+$verdict->statementText();   // the same in plain words, ready to send to the author
+
+// Later, from the record, in another language. A verdict that restricts nothing is a 409
+// `no_restriction`, raised as an ApiError and never retried.
+$statement = $tf->statement($verdict->id(), 'es');
+
+// The author contests it. It waits in the review queue under Appeals.
+$tf->appeal($verdict->id(), 'It was a recipe, not an insult.');
+
+// A person decides, with reasons. appealDecision() is the text to send back.
+$decided = $tf->resolveAppeal($verdict->id(), 'reversed', 'ana', 'A recipe after all.', 'es');
+$decided->appealDecision();
+$decided->appeal();           // state, filed_at, reason, resolved_at, resolved_by, explanation
+$tf->record($id)->transparency();   // uuid and submitted_at, once filed with the Commission
+
+// A period for the Commission's Transparency Database, up to 31 days, 100 a page.
+$page = $tf->transparency('2026-10-01', '2026-10-31');
+$next = $tf->transparency('2026-10-01', '2026-10-31', after: $page['next']);
+```
+
+Appealing twice, appealing after the six-month window or resolving an appeal that is not
+open is a 409 (`appeal_filed`, `appeal_window_closed`, `no_open_appeal`). An
+`appeal.resolved` webhook tells your site the outcome, which is what puts reversed content
+back.
 
 ## Webhooks
 
