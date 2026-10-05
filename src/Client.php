@@ -49,7 +49,7 @@ class Client
      * Moderate a comment, a review, a message, a description.
      *
      * @param string $content
-     * @param array<string, mixed> $options `locales`, `surface`, `ai`, `reference`, `policy`.
+     * @param array<string, mixed> $options `locales`, `surface`, `effort`, `reference`, `policy`.
      * @return Verdict
      */
     public function text(string $content, array $options = []): Verdict
@@ -192,7 +192,7 @@ class Client
      * Many things in one call, answered now.
      *
      * @param list<array<string, mixed>> $items Each with a `kind` and that kind's fields.
-     * @param array<string, mixed> $options Envelope defaults: `ai`, `locales`, `surface`, `policy`.
+     * @param array<string, mixed> $options Envelope defaults: `effort`, `locales`, `surface`, `policy`.
      * @return BatchResult
      */
     public function batch(array $items, array $options = []): BatchResult

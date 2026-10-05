@@ -61,7 +61,9 @@ $verdict->topic('crypto');
 $verdict->id();               // mod_..., the name of this decision
 $verdict->reference();        // your own id, as you sent it
 $verdict->project();          // the project it was filed under
-$verdict->usedAi();           // whether the model read it
+$verdict->effort();           // 'low', 'medium' or 'high': the effort applied
+$verdict->modelRead();        // whether the model read it
+$verdict->modelWhy();         // why it did not although it could, or null
 $verdict->cached();           // answered from a verdict already reached
 $verdict->charged();          // credits this call cost
 $verdict->creditsRemaining();
@@ -73,6 +75,31 @@ Three decisions, not two. `review` is where the uncertainty is allowed to live: 
 choose between publishing and deleting, a threshold set safely deletes real posts and one
 set kindly publishes the abuse. There is no `isToxic()` here for the same reason: fifteen
 categories collapsed into one boolean is somebody else's policy in your code.
+
+## How hard it looks
+
+`effort` says how far a check may go, on every call, on a batch and on each of its items:
+
+| `effort` | What happens | Cost |
+|---|---|---|
+| `low` | The free checks only | 1 credit |
+| `medium` | The model reads only what the free checks left in doubt | 1 credit, plus the model's tokens when it reads |
+| `high` | The model reads everything not already refused on hard evidence | 1 credit, plus the model's tokens |
+
+Left out, it is your policy's default if it has one, then the kind's own: `medium` for text
+and conversations, `high` for images and prompts, `low` for names, emails, signups and links.
+Names, emails and links only take `low`: anything else is a validation error with the code
+`effort_unavailable`. An image asked for at `medium` is read at `high`, and the answer says
+so.
+
+```php
+$tf->text($comment, ['effort' => 'low']);    // never the model
+$tf->text($listing, ['effort' => 'high']);   // the model reads it unless it was refused outright
+
+$verdict->effort();      // the level applied
+$verdict->modelRead();   // whether the model read it
+$verdict->modelWhy();    // 'settled', 'conversation_sampling', 'test_key' or 'unavailable', or null
+```
 
 ## What it does for you
 
@@ -126,16 +153,17 @@ try {
 ## When the model is down
 
 A verdict reached without the model because the provider was failing comes back with
-`degraded` set, and is billed as the cheap call. It is a separate field from `used_ai` on
-purpose: one says the cheap detectors were enough, the other says nobody read it, and only
-the first is reassuring. Hold or queue what matters to you when you see it.
+`degraded` set, and is billed as the cheap call. It is a separate statement from
+`modelRead()` being false: `modelWhy()` saying `settled` means the cheap detectors were
+enough, `degraded` means nobody could read it, and only the first is reassuring. Hold or
+queue what matters to you when you see it.
 
-In a conversation the model is sometimes asked and deliberately not run (it reads a message
+In a conversation the model is sometimes allowed and deliberately not run (it reads a message
 when the free detectors found something, when a lead type is half there, or every few
-messages). That is a third statement, and it has its own accessor:
+messages). That is a third statement, and `modelWhy()` says it:
 
 ```php
-$verdict->modelSkipped();   // 'conversation_sampling', or null when the model was not skipped
+$verdict->modelWhy();   // 'conversation_sampling', or null when the model read it
 ```
 
 ## Projects
@@ -244,7 +272,7 @@ $tf->conversation([
 $batch = $tf->batch([
     ['kind' => 'text', 'content' => '...', 'reference' => 'c_1'],
     ['kind' => 'image', 'url' => '...', 'reference' => 'p_2'],
-], ['ai' => false]);
+], ['effort' => 'low']);
 
 foreach ($batch->verdicts() as $index => $verdict) { /* ... */ }
 foreach ($batch->failures() as $index => $error) { /* ... */ }   // negative keys: a failure no item owns

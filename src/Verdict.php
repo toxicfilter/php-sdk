@@ -165,10 +165,23 @@ class Verdict
         return array_values((array) ($this->raw['signals'] ?? []));
     }
 
-    /** @return bool Whether a model read it, or the cheap detectors settled it. */
-    public function usedAi(): bool
+    /**
+     * The effort applied: `low`, `medium` or `high`. Not always the one sent: an image
+     * asked for at `medium` is read at `high`. Null on a stored row that never knew it.
+     *
+     * @return string|null
+     */
+    public function effort(): ?string
     {
-        return (bool) ($this->raw['used_ai'] ?? false);
+        return is_string($this->raw['effort'] ?? null) ? $this->raw['effort'] : null;
+    }
+
+    /** @return bool Whether a model read it, or the cheap detectors settled it. */
+    public function modelRead(): bool
+    {
+        $model = $this->raw['model'] ?? null;
+
+        return is_array($model) && ($model['read'] ?? false) === true;
     }
 
     /** @return bool Whether this content had been judged before. */
@@ -245,7 +258,8 @@ class Verdict
 
     /**
      * Part of the pipeline could not run, usually the model. The verdict is real, reached
-     * with less. Not the same as `usedAi()` being false, which means it was not needed.
+     * with less. Not the same as `modelRead()` being false, which usually means it was not
+     * needed.
      *
      * @return bool
      */
@@ -255,18 +269,19 @@ class Verdict
     }
 
     /**
-     * Why the model did not read this although it was asked to, or null when it was not
-     * skipped.
+     * Why the model did not read this although the effort allowed it, or null when it read
+     * it or the effort never allowed it.
      *
-     * Today the one reason is `conversation_sampling`: in a conversation the model reads a
-     * message when the free detectors found something, a lead type is half there, or every
-     * few messages. Without this, a message deliberately left unread looks exactly like one
-     * the cheap detectors settled, and `degraded()` (nobody COULD read it) is a different
-     * statement again.
+     * `settled` (the free checks were certain), `conversation_sampling` (in a conversation
+     * the model reads a message when something was found, a lead type is half there, or
+     * every few messages), `test_key` (test keys never reach the model) or `unavailable`.
+     * Without it, a message deliberately left unread looks exactly like one the cheap
+     * detectors settled, and `degraded()` (nobody COULD read it) is a different statement
+     * again.
      *
      * @return string|null
      */
-    public function modelSkipped(): ?string
+    public function modelWhy(): ?string
     {
         $model = $this->raw['model'] ?? null;
 
@@ -274,7 +289,7 @@ class Verdict
             return null;
         }
 
-        return is_string($model['why'] ?? null) ? $model['why'] : 'unknown';
+        return is_string($model['why'] ?? null) ? $model['why'] : null;
     }
 
     /**

@@ -187,18 +187,54 @@ final class ReadableFieldsTest extends TestCase
      * The model deliberately not reading this message looks, from the decision alone,
      * exactly like the cheap detectors settling it. The API says which one it was.
      */
-    public function test_it_says_when_the_model_was_asked_and_deliberately_not_run(): void
+    public function test_it_says_when_the_model_was_allowed_and_deliberately_not_run(): void
     {
         [$tf] = $this->client([[200, $this->verdict([
-            'model' => ['asked' => true, 'read' => false, 'why' => 'conversation_sampling'],
+            'model' => ['read' => false, 'why' => 'conversation_sampling'],
         ])]]);
 
-        $this->assertSame('conversation_sampling', $tf->conversation([['author' => 'a', 'content' => 'hi']])->modelSkipped());
+        $verdict = $tf->conversation([['author' => 'a', 'content' => 'hi']]);
+
+        $this->assertFalse($verdict->modelRead());
+        $this->assertSame('conversation_sampling', $verdict->modelWhy());
     }
 
-    public function test_a_verdict_the_model_was_not_skipped_on_says_nothing(): void
+    public function test_it_reads_the_effort_applied_and_whether_the_model_read_it(): void
     {
-        $this->assertNull((new Verdict($this->verdict()))->modelSkipped());
+        $verdict = new Verdict($this->verdict(['effort' => 'high', 'model' => ['read' => true]]));
+
+        $this->assertSame('high', $verdict->effort());
+        $this->assertTrue($verdict->modelRead());
+        $this->assertNull($verdict->modelWhy());
+    }
+
+    public function test_a_verdict_with_no_reason_given_says_nothing(): void
+    {
+        $verdict = new Verdict($this->verdict(['effort' => 'low', 'model' => ['read' => false]]));
+
+        $this->assertNull($verdict->modelWhy());
+        $this->assertFalse($verdict->modelRead());
+    }
+
+    public function test_a_stored_row_without_an_effort_reads_as_null(): void
+    {
+        $raw = $this->verdict();
+        unset($raw['effort'], $raw['model']);
+
+        $verdict = new Verdict($raw);
+
+        $this->assertNull($verdict->effort());
+        $this->assertFalse($verdict->modelRead());
+        $this->assertNull($verdict->modelWhy());
+    }
+
+    public function test_the_effort_option_is_sent_as_given(): void
+    {
+        [$tf, $transport] = $this->client([[200, $this->verdict()]]);
+
+        $tf->text('hello', ['effort' => 'low']);
+
+        $this->assertSame('low', $transport->calls[0]['body']['effort']);
     }
 
     public function test_it_lists_the_recent_batches(): void
