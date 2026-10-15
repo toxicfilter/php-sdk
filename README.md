@@ -2,6 +2,8 @@
 
 # ToxicFilter PHP SDK
 
+[![tests](https://github.com/toxicfilter/php-sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/toxicfilter/php-sdk/actions/workflows/tests.yml)
+
 The official PHP client for [ToxicFilter](https://toxicfilter.com).
 
 ```bash
