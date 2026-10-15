@@ -2,7 +2,7 @@
 
 # ToxicFilter PHP SDK
 
-[![tests](https://github.com/toxicfilter/php-sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/toxicfilter/php-sdk/actions/workflows/tests.yml)
+[![tests](https://github.com/toxicfilter/php-sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/toxicfilter/php-sdk/actions/workflows/tests.yml) [![Packagist version](https://img.shields.io/packagist/v/edulazaro/toxicfilter-sdk.svg)](https://packagist.org/packages/edulazaro/toxicfilter-sdk) [![Packagist downloads](https://img.shields.io/packagist/dt/edulazaro/toxicfilter-sdk.svg)](https://packagist.org/packages/edulazaro/toxicfilter-sdk) [![license](https://img.shields.io/packagist/l/edulazaro/toxicfilter-sdk.svg)](https://github.com/toxicfilter/php-sdk/blob/main/LICENSE) [![PHP version](https://img.shields.io/packagist/dependency-v/edulazaro/toxicfilter-sdk/php.svg)](https://packagist.org/packages/edulazaro/toxicfilter-sdk)
 
 The official PHP client for [ToxicFilter](https://toxicfilter.com).
 
